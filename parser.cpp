@@ -4,6 +4,7 @@
 #include <cctype>
 #include <unordered_map>
 #include <map>
+#include <fstream>
 
 using namespace std;
 
@@ -405,27 +406,34 @@ public:
     }
 };
 
-int main()
+int main(int argc ,char* argv[])
 {
-    string input = R"(
-        int a = 5;
-        float pi = 3.14;
-        double bigNum = 123.456;
-        char letter = 'A';
-        for (int i = 0; i < 10; i = i + 1) {
-            a = a + 1;
-        }
-        while (a > 0) {
-            a = a - 1;
-        }
-        if (a > 10) {
-            return a;
-        } else {
-            return 0;
-        }
-    )";
 
-    Lexer lexer(input);
+    string code = "";
+
+
+    if (argc != 2) {
+        cerr << "Usage: mycompiler <filename.txt>\n";
+        return 1;
+    }
+
+    string filename = argv[1];
+    ifstream file(filename);
+
+    if (!file.is_open()) {
+        cerr << "Error: Could not open file " << filename << '\n';
+        return 1;
+    }
+
+    string line;
+    while (getline(file, line)) {
+        code+= line;
+    }
+
+    file.close();
+
+
+    Lexer lexer(code);
     vector<Token> tokens = lexer.tokenize();
 
     for (const auto &token : tokens)
