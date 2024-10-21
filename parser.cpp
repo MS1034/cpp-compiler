@@ -38,10 +38,44 @@ enum TokenType
     T_WHILE,
 };
 
+
+
+// class SymbolTableEntry {  
+// public:  
+//   string identifier, scope, dataType; 
+//     int lineNo; 
+  
+// SymbolTableEntry(const string& n, const string& dt, const string&sc,  const int&ln)  
+//         : identifier(n), dataType(dt), scope(sc), lineNo(ln) {}  
+// };  
+
+
+// class SymbolTable {  
+// public:  
+//     void insert(const SymbolTableEntry& entry) {  
+// entries.push_back(entry);  
+//     }  
+  
+// SymbolTableEntry* lookup(const string& identifier) {  
+//         for (auto&entry : entries) {  
+//             if (entry.identifier == identifier) {  
+//                 return &entry;
+//             }  
+//         }  
+//         return nullptr;  
+//     }  
+  
+// private:  
+// vector<SymbolTableEntry> entries;  
+// };  
+
+
+
 struct Token
 {
     TokenType type;
     string value;
+    int line;
 };
 
 class Lexer
@@ -49,6 +83,8 @@ class Lexer
 private:
     string src;
     size_t pos;
+    int lineNumber;
+
 
     unordered_map<string, TokenType> keywords = {
         {"if", T_IF},
@@ -82,6 +118,7 @@ public:
     {
         this->src = src;
         this->pos = 0;
+        this->lineNumber = 1;
     }
 
     string consumeCharLiteral()
@@ -101,7 +138,7 @@ public:
 
         if (this->pos >= this->src.size() || this->src[this->pos] != '\'')
         {
-            cout << "Invalid character literal" << endl;
+            cerr << "Invalid character literal at line number "<< lineNumber <<  endl;
             exit(1);
         }
         this->pos++;  
@@ -142,6 +179,11 @@ public:
         while (pos < src.size())
         {
             char c = src[pos];
+            if(c == '\n')
+            {
+                lineNumber++;
+                pos++;
+            }
             if (isspace(c))
             {
                 pos++;
@@ -150,7 +192,7 @@ public:
 
             if (isdigit(c) || (c == '.' && pos + 1 < src.size() && isdigit(src[pos + 1])))
             {
-                tokens.push_back({T_NUM, consumeNumber()});
+                tokens.push_back({T_NUM, consumeNumber(),lineNumber});
                 continue;
             }
 
@@ -159,32 +201,32 @@ public:
                 string word = consumeWord();
                 if (keywords.find(word) != keywords.end())
                 {
-                    tokens.push_back({keywords[word], word});
+                    tokens.push_back({keywords[word], word, lineNumber});
                 }
                 else
                 {
-                    tokens.push_back({T_ID, word});
+                    tokens.push_back({T_ID, word,lineNumber});
                 }
                 continue;
             }
 
             if (c == '\'')
             {
-                tokens.push_back({T_CHAR_LITERAL, consumeCharLiteral()});
+                tokens.push_back({T_CHAR_LITERAL, consumeCharLiteral(),lineNumber});
                 continue;
             }
 
             if (symbols.find(c) != symbols.end())
             {
-                tokens.push_back({symbols[c], string(1, c)});
+                tokens.push_back({symbols[c], string(1, c), lineNumber});
                 pos++;
                 continue;
             }
 
-            cout << "Unexpected character: " << c << endl;
+            cout << "Unexpected character at line number " << lineNumber << ": " << c << endl;
             pos++;
         }
-        tokens.push_back({T_EOF, ""});
+        tokens.push_back({T_EOF, "",lineNumber});
         return tokens;
     }
 };
@@ -196,12 +238,15 @@ class Parser
 private:
     vector<Token> tokens;
     size_t pos;
+    int lineNumber;
+
 
 public:
     Parser(const vector<Token> &tokens)
     {
         this->tokens = tokens;
         this->pos = 0;
+        this->lineNumber = 1;
     }
 
     void parseProgram()
@@ -253,6 +298,7 @@ public:
 
     void parseStatement()
     {
+
         if (tokens[pos].type == T_INT || tokens[pos].type == T_CHAR ||
             tokens[pos].type == T_FLOAT || tokens[pos].type == T_DOUBLE)
         {
@@ -373,7 +419,8 @@ public:
         }
         else
         {
-            cout << "Unexpected token: " << tokens[pos].value << endl;
+            
+            cerr << "Unexpected token: " << tokens[pos].value <<" at line number " << tokens[pos].line  << endl;
             exit(1);
         }
     }
@@ -386,7 +433,7 @@ public:
         }
         else
         {
-            cout << "Expected token " << type << ", but got " << tokens[pos].type << endl;
+            cerr << "Expected token " << type << ", but got " << tokens[pos].type <<" at line number " << tokens[pos].line << endl;
             exit(1);
         }
     }
@@ -400,7 +447,7 @@ public:
         }
         else
         {
-            cout << "Expected a type, but got " << tokens[pos].type << endl;
+            cerr << " Expected a type, but got " << tokens[pos].type <<" at line number " << tokens[pos].line << endl;
             exit(1);
         }
     }
@@ -428,6 +475,7 @@ int main(int argc ,char* argv[])
     string line;
     while (getline(file, line)) {
         code+= line;
+        code+= '\n';
     }
 
     file.close();
@@ -436,10 +484,7 @@ int main(int argc ,char* argv[])
     Lexer lexer(code);
     vector<Token> tokens = lexer.tokenize();
 
-    for (const auto &token : tokens)
-    {
-        cout << "Token: " << token.value << ", Type: " << token.type << endl;
-    }
-
+    Parser parser(tokens);
+    parser.parseProgram();
     return 0;
 }
