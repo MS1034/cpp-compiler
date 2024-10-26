@@ -1,16 +1,61 @@
-int a = 5;
 float pi = 3.14;
 double bigNum = 123.456;
+int a = 1223.3;
 char letter = 'A';
-bool flag = true;
-for (int i = 0; i < 10; i = i + 1) {
-    a = a + 1;
-}
-while (a > 0) {
-    a = a - 1;
-}
+bool flag = 0;
+int b;
+
 if (a > 10) {
     return a;
 } else {
     return 0;
 }
+int count = 5; 
+for (; count < 10;) { 
+    a = a + 1;
+    count++; 
+}
+int j = 0; 
+for (; j < 10; j++) { 
+    a = a + 1;
+}
+int l = 10; 
+for (; l > 0; l--) { 
+    b = b + j;
+}
+float m = 0.0; 
+for (; m < 1.0;) { 
+    a = a + j;
+    m += 0.1; 
+}
+while (a > 0)
+{
+    a = a - 1;
+}
+int k = 0; 
+for (;; k++) { 
+    if (k >= 10){ 
+        break;
+        }
+    a = a + 1;
+}
+
+char c = 'a'; 
+for (; c <= 'z';) { 
+    c++; 
+}
+int x = 0;
+int y = 0; 
+for (; x < 10 && y < 5; x++, y++) { 
+    a = a + x;
+    b = b + y;
+}
+
+ while (j < 10)
+{
+    j++;
+if (a%10== 10) {
+}
+
+}
+int result = (a + b * c - d / e) % f + (g > h ? i : j) - (k && (l || m)) * n;
