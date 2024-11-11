@@ -59,7 +59,6 @@ enum TokenType
     T_BREAK,
     T_CONTINUE,
     T_DEFAULT,
-
     T_EOL,
     T_EOF,
 };
@@ -212,6 +211,32 @@ public:
 
         return src.substr(start, pos - start);
     }
+    void consumeSingleLineComment()
+    {
+        while (this->src[this->pos] != '\n')
+        {
+            this->pos++;
+        }
+        this->lineNumber++;
+    }
+
+    void consumeMultiLineComment()
+    {
+        while (this->pos + 1 < this->src.size())
+        {
+
+            if (this->src[this->pos] == '*' && this->src[this->pos + 1] == '/')
+            {
+                this->pos = this->pos + 2;
+                return;
+            }
+
+            else
+            {
+                this->pos++;
+            }
+        }
+    }
 
     string consumeWord()
     {
@@ -236,7 +261,18 @@ public:
                 pos++;
                 continue;
             }
-
+            if (src[pos - 1] != '"' && c == '/' && src[pos + 1] == '/')
+            {
+                pos = pos + 2;
+                consumeSingleLineComment();
+                continue;
+            }
+            if (src[pos - 1] != '"' && c == '/' && src[pos + 1] == '*')
+            {
+                pos = pos + 2;
+                consumeMultiLineComment();
+                continue;
+            }
             if (isdigit(c) || (c == '.' && pos + 1 < src.size() && isdigit(src[pos + 1])))
             {
                 tokens.push_back({T_NUM, consumeNumber(), lineNumber});
@@ -288,6 +324,7 @@ public:
         return tokens;
     }
 };
+
 class Parser
 {
 private:
@@ -716,7 +753,6 @@ int main(int argc, char *argv[])
         code += line;
         code += '\n';
     }
-    cout << code;
     file.close();
 
     Lexer lexer(code);
