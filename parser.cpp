@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <map>
 #include <fstream>
+#include <stack>
 
 using namespace std;
 
@@ -124,7 +125,8 @@ private:
         {"case", T_CASE},
         {"break", T_BREAK},
         {"continue", T_CONTINUE},
-        {"default", T_DEFAULT}};
+        {"default", T_DEFAULT},
+    };
 
     unordered_map<char, TokenType> symbols = {
         {'=', T_ASSIGN},
@@ -727,6 +729,207 @@ public:
     }
 };
 
+class ICGenerator
+{
+private:
+    vector<string> instructions;
+    stack<string> operands;
+    int tempVarCounter;
+
+    string getTempVar()
+    {
+        return "t" + to_string(tempVarCounter++);
+    }
+
+public:
+    ICGenerator() : tempVarCounter(1) {}
+    void processToken(const vector<Token> &tokens)
+    {
+        for (size_t i = 0; i < tokens.size(); ++i)
+        {
+            const Token &token = tokens[i];
+
+            switch (token.type)
+            {
+            case T_ID:
+            case T_NUM:
+                operands.push(token.value);
+                break;
+
+            case T_PLUS:
+            case T_MINUS:
+            case T_MUL:
+            case T_DIV:
+            case T_MOD:
+            {
+                // Ensure there are enough operands for binary operations
+                if (operands.size() < 2)
+                {
+                    cerr << "Error: Insufficient operands for operator '" << token.value << "'." << endl;
+                    return;
+                }
+
+                string right = operands.top();
+                operands.pop();
+                string left = operands.top();
+                operands.pop();
+
+                string temp = getTempVar();
+                string operation = (token.type == T_PLUS) ? "+" : (token.type == T_MINUS) ? "-"
+                                                              : (token.type == T_MUL)     ? "*"
+                                                              : (token.type == T_DIV)     ? "/"
+                                                                                          : "%";
+
+                instructions.push_back(temp + " = " + left + " " + operation + " " + right);
+                operands.push(temp);
+                break;
+            }
+
+            case T_ASSIGN:
+                if (i + 1 < tokens.size() && tokens[i + 1].type == T_ID)
+                {
+                    string var = tokens[++i].value;
+                    if (operands.empty())
+                    {
+                        cerr << "Error: No operand to assign to variable " << var << endl;
+                        return;
+                    }
+                    string value = operands.top();
+                    operands.pop();
+                    instructions.push_back(var + " = " + value);
+                }
+                break;
+
+            case T_PLUS_ASSIGN:
+            case T_MINUS_ASSIGN:
+            case T_MUL_ASSIGN:
+            case T_DIV_ASSIGN:
+            {
+                if (i + 1 < tokens.size() && tokens[i + 1].type == T_ID)
+                {
+                    string var = tokens[++i].value;
+                    if (operands.empty())
+                    {
+                        cerr << "Error: No operand for assignment operation to variable " << var << endl;
+                        return;
+                    }
+                    string value = operands.top();
+                    operands.pop();
+
+                    string operation = (token.type == T_PLUS_ASSIGN) ? "+=" : (token.type == T_MINUS_ASSIGN) ? "-="
+                                                                          : (token.type == T_MUL_ASSIGN)     ? "*="
+                                                                                                             : "/=";
+
+                    instructions.push_back(var + " " + operation + " " + value);
+                }
+                break;
+            }
+
+            case T_EQ:
+            case T_NEQ:
+            case T_GT:
+            case T_LT:
+            case T_GTE:
+            case T_LTE:
+            {
+                // Comparison operators
+                if (operands.size() < 2)
+                {
+                    cerr << "Error: Insufficient operands for comparison operator '" << token.value << "'." << endl;
+                    return;
+                }
+
+                string right = operands.top();
+                operands.pop();
+                string left = operands.top();
+                operands.pop();
+
+                string temp = getTempVar();
+                string comparison = (token.type == T_EQ) ? "==" : (token.type == T_NEQ) ? "!="
+                                                              : (token.type == T_GT)    ? ">"
+                                                              : (token.type == T_LT)    ? "<"
+                                                              : (token.type == T_GTE)   ? ">="
+                                                                                        : "<=";
+
+                instructions.push_back(temp + " = " + left + " " + comparison + " " + right);
+                operands.push(temp);
+                break;
+            }
+
+            case T_AND:
+            case T_OR:
+            {
+                // Logical operators
+                if (operands.size() < 2)
+                {
+                    cerr << "Error: Insufficient operands for logical operator '" << token.value << "'." << endl;
+                    return;
+                }
+
+                string right = operands.top();
+                operands.pop();
+                string left = operands.top();
+                operands.pop();
+
+                string temp = getTempVar();
+                string logicalOp = (token.type == T_AND) ? "&&" : "||";
+
+                instructions.push_back(temp + " = " + left + " " + logicalOp + " " + right);
+                operands.push(temp);
+                break;
+            }
+
+            case T_TRUE:
+            case T_FALSE:
+                // Boolean values
+                operands.push(token.value);
+                break;
+
+            case T_IF:
+            case T_ELSE:
+            case T_RETURN:
+            case T_SWITCH:
+            case T_CASE:
+            case T_BREAK:
+            case T_CONTINUE:
+            case T_DEFAULT:
+            {
+                // Handle control flow
+                string controlFlow = token.value;
+                instructions.push_back(controlFlow + " statement");
+                break;
+            }
+
+            case T_FOR:
+            case T_WHILE:
+            {
+                // Handle loops
+                string loop = token.value;
+                instructions.push_back(loop + " loop");
+                break;
+            }
+
+            case T_EOL:
+                // End of line
+                instructions.push_back("End of Line");
+                break;
+
+            default:
+                cerr << "Error: Unhandled token type: " << token.value << endl;
+                break;
+            }
+        }
+    }
+
+    void printInstructions() const
+    {
+        for (const string &instr : instructions)
+        {
+            cout << instr << endl;
+        }
+    }
+};
+
 int main(int argc, char *argv[])
 {
 
@@ -762,5 +965,10 @@ int main(int argc, char *argv[])
 
     Parser parser(tokens);
     parser.parseProgram();
+
+    ICGenerator icg;
+    icg.processToken(tokens);
+    icg.printInstructions();
+
     return 0;
 }
